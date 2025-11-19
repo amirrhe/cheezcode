@@ -22,50 +22,20 @@ function centerLine(str, artWidth) {
   return " ".repeat(padding) + str;
 }
 
-// smarter cheese (cleaner and readable)
-function addCheeseBubbles(asciiLines, artWidth) {
-  const CHEESE_CHARS = ["🧀", "•", "o"];
-  let strokeIndex = 0;
+// diagonal paw trail across the block (only on spaces, never on letters)
+function addDiagonalPaws(asciiLines, width) {
+  const lastIndex = asciiLines.length - 1;
 
-  return asciiLines.map((line) => {
-    if (!line.includes("█")) return line.padEnd(artWidth, " ");
-
-    const chars = line.padEnd(artWidth, " ").split("");
-    let i = 0;
-
-    while (i < chars.length) {
-      if (chars[i] === "█") {
-        let j = i;
-        while (j < chars.length && chars[j] === "█") j++;
-
-        const length = j - i;
-        if (length >= 3) {
-          const mid = i + Math.floor(length / 2);
-          const variant = CHEESE_CHARS[strokeIndex % CHEESE_CHARS.length];
-          chars[mid] = variant;
-          strokeIndex++;
-        }
-        i = j;
-      } else {
-        i++;
-      }
-    }
-    return chars.join("");
-  });
-}
-
-// diagonal paw trail
-function addDiagonalPaws(asciiLines, artWidth) {
-  const result = asciiLines.map((l) => l.padEnd(artWidth, " "));
-  const lastIndex = result.length - 1;
-
-  return result.map((line, i) => {
-    if (!line.includes("█") && !line.includes("🧀")) return line;
-
-    const col = Math.floor((i / Math.max(1, lastIndex)) * (artWidth - 1));
+  return asciiLines.map((line, i) => {
     const chars = line.split("");
 
-    if (chars[col] === " ") chars[col] = "🐾";
+    // choose a column based on row index → diagonal effect
+    const col = Math.floor((i / Math.max(1, lastIndex)) * (width - 1));
+
+    // place paw only if it's background (space), so we don't break any strokes
+    if (chars[col] === " ") {
+      chars[col] = "🐾";
+    }
 
     return chars.join("");
   });
@@ -73,67 +43,48 @@ function addDiagonalPaws(asciiLines, artWidth) {
 
 // ---------- main logic ----------
 
-// Generate FIGlet ASCII
+// Generate FIGlet ASCII from Persian text
 let raw = print(text, { font: FontStyle.STANDARD, silent: true });
 
-// Trim edges
+// Trim empty top/bottom
 let lines = trimEmptyEdges(raw.split("\n"));
-let width = Math.max(...lines.map((l) => l.length));
 
-// Add effects
-lines = addCheeseBubbles(lines, width);
+// Normalize width
+let width = Math.max(...lines.map((l) => l.length));
+lines = lines.map((l) => l.padEnd(width, " "));
+
+// Add diagonal paws walking across the block (but only on spaces)
 lines = addDiagonalPaws(lines, width);
 
-width = Math.max(...lines.map((l) => l.length));
-
-// Cheese drips
+// Cheese drips line above the word
 const cheeseLine = centerLine("🧀🧀", width);
 
-// Cat
+// Cat (branding)
 const catOnTop = [
   centerLine("/\\_/\\", width),
-  centerLine("( o.o )   🍕 Chiz Garita", width), // ENGLISH for terminal
+  centerLine("( o.o )   🍕 Chiz Garita", width),
   centerLine("> ^ <", width),
 ];
 
-// Scratch
+// Scratch line under the word
 const scratchWidth = Math.floor(width * 0.85);
 const scratches = centerLine("/".repeat(scratchWidth), width);
 
-// Captions
-const captionEn = centerLine(
-  "Chiz Garita — Official Pizza of Team CheezCode 😺🧀",
-  width
-);
-
+// Persian caption
 const captionFa = centerLine(
   "چیز گاریتا — پیتزای رسمی تیم چیزکُد 😺🧀",
   width
 );
 
-// Final art for terminal
-const terminalOutput = [
-  ...catOnTop,
-  "",
-  cheeseLine,
-  ...lines,
-  scratches,
-  captionEn,
-].join("\n");
-
-// Final art for file (Persian)
+// Final art for file
 const fileOutput = [
   ...catOnTop,
   "",
   cheeseLine,
-  ...lines,
+  ...lines,      // FIGlet + diagonal paws
   scratches,
   captionFa,
 ].join("\n");
 
-// Print to terminal (English)
-console.log(terminalOutput);
-
-// Save full Persian version for slides
+// Write only to file (no console ASCII)
 fs.writeFileSync("cheez-ascii.txt", fileOutput, "utf8");
-console.log("\n✓ Persian version written to cheez-ascii.txt");
