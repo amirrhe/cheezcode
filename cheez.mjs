@@ -17,56 +17,55 @@ function trimEmptyEdges(asciiLines) {
 }
 
 function centerLine(str, artWidth) {
-  const len = str.length;
-  const padding = Math.max(0, Math.floor((artWidth - len) / 2));
+  const padding = Math.max(0, Math.floor((artWidth - str.length) / 2));
   return " ".repeat(padding) + str;
 }
 
-// diagonal paw trail across the block (only on spaces, never on letters)
+// diagonal paw trail (only on spaces)
 function addDiagonalPaws(asciiLines, width) {
   const lastIndex = asciiLines.length - 1;
 
   return asciiLines.map((line, i) => {
     const chars = line.split("");
-
-    // choose a column based on row index → diagonal effect
     const col = Math.floor((i / Math.max(1, lastIndex)) * (width - 1));
 
-    // place paw only if it's background (space), so we don't break any strokes
-    if (chars[col] === " ") {
-      chars[col] = "🐾";
-    }
-
+    if (chars[col] === " ") chars[col] = "🐾";
     return chars.join("");
   });
 }
 
-// ---------- main logic ----------
+// ---------- main ----------
 
-// Generate FIGlet ASCII from Persian text
+// Generate FIGlet ASCII
 let raw = print(text, { font: FontStyle.STANDARD, silent: true });
 
-// Trim empty top/bottom
+// Trim empty rows
 let lines = trimEmptyEdges(raw.split("\n"));
 
-// Normalize width
+// Determine width and pad
 let width = Math.max(...lines.map((l) => l.length));
 lines = lines.map((l) => l.padEnd(width, " "));
 
-// Add diagonal paws walking across the block (but only on spaces)
+// Add paws
 lines = addDiagonalPaws(lines, width);
 
-// Cheese drips line above the word
+// Cheese drips
 const cheeseLine = centerLine("🧀🧀", width);
 
-// Cat (branding)
-const catOnTop = [
-  centerLine("/\\_/\\", width),
-  centerLine("( o.o )   🍕 Chiz Garita", width),
-  centerLine("> ^ <", width),
-];
+// --- FIXED CAT ALIGNMENT ---
+// center the cat head
+const catHead = centerLine("/\\_/\\", width);
 
-// Scratch line under the word
+// center ONLY the face
+const catFaceCentered = centerLine("( o.o )", width);
+
+// append text WITHOUT breaking centering
+const catFace = catFaceCentered + "  🍕 Chiz Garita";
+
+// center the chin
+const catChin = centerLine("> ^ <", width);
+
+// Scratch line
 const scratchWidth = Math.floor(width * 0.85);
 const scratches = centerLine("/".repeat(scratchWidth), width);
 
@@ -76,15 +75,17 @@ const captionFa = centerLine(
   width
 );
 
-// Final art for file
+// Final art
 const fileOutput = [
-  ...catOnTop,
+  catHead,
+  catFace,
+  catChin,
   "",
   cheeseLine,
-  ...lines,      // FIGlet + diagonal paws
+  ...lines,
   scratches,
   captionFa,
 ].join("\n");
 
-// Write only to file (no console ASCII)
+// Save
 fs.writeFileSync("cheez-ascii.txt", fileOutput, "utf8");
